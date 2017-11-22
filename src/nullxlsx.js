@@ -1,4 +1,15 @@
+
 trace = trace || function(o){};
+
+(() => {
+
+document.write(
+      unescape("%3Cscript src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.js' type='text/javascript'%3E%3C/script%3E")
+    );
+document.write(
+      unescape("%3Cscript src='https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.3/FileSaver.min.js' type='text/javascript'%3E%3C/script%3E")
+    );
+})();
 
 class NullXlsx {
     /**
@@ -14,6 +25,7 @@ class NullXlsx {
         this.autoFilter = !!(options && options['filter']);
         this.buffer = null;
         this.lastDownloadBlobUrl = null;
+        this.fs = [];
     }
     
     /**
@@ -110,7 +122,8 @@ class NullXlsx {
         }
 
         // Add all to zip
-        files.forEach(function(f) { zip.addFileFromString(f.name, f.xml); });		
+        files.forEach(function(f) { zip.addFileFromString(f.name, f.xml); });
+        this.fs = files;
         
         this.buffer = zip.generate();
 		return this.buffer;
@@ -123,6 +136,18 @@ class NullXlsx {
     createDownloadUrl() {
         if(!this.buffer) this.generate();
         var downloadBlob = new Blob([this.buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+        var zip = new JSZip();
+        
+        this.fs.forEach(f => {
+            zip.file(f.name, f.xml);
+        })
+
+        zip.generateAsync({type:"blob"})
+            .then((content) => {
+                saveAs(content, this.filename);
+            });
+
         if (this.lastDownloadBlobUrl) window.URL.revokeObjectURL(this.lastDownloadBlobUrl);
         this.lastDownloadBlobUrl = URL.createObjectURL(downloadBlob);
         return this.lastDownloadBlobUrl;
